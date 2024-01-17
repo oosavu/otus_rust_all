@@ -1,11 +1,13 @@
+use std::fmt;
 use serde::{Serialize, Deserialize};
+// use serde_binary;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub enum Command {
     TurnOff,
     TurnOn,
     IsEnabled,
-    GetPower,
+    GetCurrent,
     Unknown,
 }
 
@@ -15,19 +17,26 @@ pub enum Response {
     Ok,
     Enabled,
     Disabled,
-    Power(f32),
+    Current(f32),
     Unknown,
 }
 
+#[derive(Serialize, Deserialize, Debug)]
+pub enum Message{
+    Command(Command),
+    Response(Response)
+}
 
-impl fmt::Display for Response {
+pub fn serialize_message( msg: &Message) -> Vec<u8> {
+    serde_json::to_vec(msg).unwrap()
+}
+
+pub fn deserialize_message(data:  &[u8]) -> Message {
+    serde_json::from_slice(data).unwrap()
+}
+
+impl fmt::Display for Message {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Response::Ok => write!(f, "Ok"),
-            Response::Enabled => write!(f, "Enabled"),
-            Response::Disabled => write!(f, "Disabled"),
-            Response::Power(power) => write!(f, "Power: {}", power),
-            Response::Unknown => write!(f, "Unknown"),
-        }
+        write!(f, "{}", serde_json::to_string(self).unwrap())
     }
 }
