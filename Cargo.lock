@@ -66,6 +66,9 @@ dependencies = [
 [[package]]
 name = "socket_tcp_client"
 version = "0.1.0"
+dependencies = [
+ "socket_tcp_protocol",
+]
 
 [[package]]
 name = "socket_tcp_protocol"

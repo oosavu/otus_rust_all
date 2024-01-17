@@ -1,5 +1,5 @@
+use serde::{Deserialize, Serialize};
 use std::fmt;
-use serde::{Serialize, Deserialize};
 // use serde_binary;
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -11,7 +11,6 @@ pub enum Command {
     Unknown,
 }
 
-
 #[derive(Serialize, Deserialize, Debug)]
 pub enum Response {
     Ok,
@@ -22,16 +21,16 @@ pub enum Response {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-pub enum Message{
+pub enum Message {
     Command(Command),
-    Response(Response)
+    Response(Response),
 }
 
-pub fn serialize_message( msg: &Message) -> Vec<u8> {
+pub fn serialize_message(msg: &Message) -> Vec<u8> {
     serde_json::to_vec(msg).unwrap()
 }
 
-pub fn deserialize_message(data:  &[u8]) -> Message {
+pub fn deserialize_message(data: &[u8]) -> Message {
     serde_json::from_slice(data).unwrap()
 }
 

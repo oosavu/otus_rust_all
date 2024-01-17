@@ -1,6 +1,7 @@
 [workspace]
 members = [
     "socket_tcp_protocol",
-    "socket_tcp_client",
+
     "socket_tcp_server",
+    "socket_tcp_client",
 ]
