@@ -6,4 +6,6 @@ members = [
     "socket_udp_client",
     "socket_udp_server",
     "socket_udp_protocol",
+    "socket_tcp_async_server",
 ]
+resolver = "2"

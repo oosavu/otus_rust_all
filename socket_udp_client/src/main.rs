@@ -1,60 +1,68 @@
 use socket_udp_protocol::*;
-use std::io;
-use std::io::{Read, Write};
-use std::net::Stream;
+use std::{
+    error::Error,
+    net::UdpSocket,
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc, Mutex,
+    },
+    thread,
+    time::Duration,
+};
 
-fn main() {
-    let mut stream = Stream::connect("127.0.0.1:8809").unwrap();
+struct SmartThermo {
+    temperature: Arc<Mutex<f32>>,
+    finished: Arc<AtomicBool>,
+}
 
-    loop {
-        show_menu();
-        let input = read_input();
+impl SmartThermo {
+    fn new() -> Result<Self, Box<dyn Error>> {
+        let socket = UdpSocket::bind("127.0.0.1:8808")?;
+        socket.set_read_timeout(Some(Duration::from_secs(1)))?;
 
-        match input {
-            Some(command) => {
-                let payload = serialize_message(&command);
-                let payload_size: u32 = payload.len() as u32;
-                let size_slice: [u8; 4] = payload_size.to_be().to_be_bytes();
-                stream.write_all(&size_slice).unwrap();
-                stream.write_all(&payload).unwrap();
+        let finished = Arc::new(AtomicBool::new(false));
+        let temperature = Arc::new(Mutex::new(0f32));
 
-                let mut in_size_buffer = [0u8; 4];
-                stream.read_exact(&mut in_size_buffer).unwrap();
-                let size: usize = u32::from_be_bytes(in_size_buffer) as usize;
-                let mut response_payload = vec![0; size];
-                stream.read_exact(&mut response_payload[..]).unwrap();
-                let response = deserialize_message(&response_payload[..]);
-
-                println!("send: {command} -> {response}");
+        let temperature_clone = temperature.clone();
+        let finished_clone = finished.clone();
+        thread::spawn(move || loop {
+            if finished_clone.load(Ordering::SeqCst) {
+                return;
             }
-            None => {
-                println!("Bye...");
-                break;
+            let mut buf = [0; 1024];
+            let read_result = socket.recv_from(&mut buf);
+            match read_result {
+                Ok(res) => {
+                    let msg = deserialize_message(&buf[..res.0]);
+                    *temperature_clone.lock().unwrap() = msg.temperature;
+                }
+                Err(err) => {
+                    println!("can't receive datagram: {err}");
+                }
             }
-        };
+        });
+
+        Ok(Self {
+            temperature,
+            finished,
+        })
+    }
+    fn get_temperature(&mut self) -> f32 {
+        *self.temperature.lock().unwrap()
     }
 }
 
-fn show_menu() {
-    println!();
-    println!("------------------");
-    println!("Select action:");
-    println!("1) turn off");
-    println!("2) turn on");
-    println!("3) is enabled");
-    println!("4) current");
-    println!("_) exit");
+impl Drop for SmartThermo {
+    fn drop(&mut self) {
+        self.finished.store(true, Ordering::SeqCst)
+    }
 }
 
-fn read_input() -> Option<Message> {
-    let mut input = String::new();
-    io::stdin().read_line(&mut input).unwrap();
-    let cmd = match input.trim() {
-        "1" => Message::Command(Command::TurnOff),
-        "2" => Message::Command(Command::TurnOn),
-        "3" => Message::Command(Command::IsEnabled),
-        "4" => Message::Command(Command::GetCurrent),
-        _ => return None,
-    };
-    Some(cmd)
+fn main() {
+    let mut thermo = SmartThermo::new().unwrap();
+    for _ in 0..120 {
+        thread::sleep(Duration::from_secs(1));
+        let temperature = thermo.get_temperature();
+        println!("The temperature is {temperature}");
+    }
 }

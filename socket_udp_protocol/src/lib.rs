@@ -2,8 +2,8 @@ use serde::{Deserialize, Serialize};
 use std::fmt;
 
 #[derive(Serialize, Deserialize)]
-pub enum Message {
-    Temperature(f32)
+pub struct Message {
+    pub temperature: f32,
 }
 
 pub fn serialize_message(msg: &Message) -> Vec<u8> {
