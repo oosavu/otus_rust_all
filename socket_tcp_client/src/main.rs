@@ -15,6 +15,7 @@ fn main() {
                 let payload = serialize_message(&command);
                 let payload_size: u32 = payload.len() as u32;
                 let size_slice: [u8; 4] = payload_size.to_be().to_be_bytes();
+                dbg!(&payload, &payload_size);
                 stream.write_all(&size_slice).unwrap();
                 stream.write_all(&payload).unwrap();
 

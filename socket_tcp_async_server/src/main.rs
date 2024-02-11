@@ -1,3 +1,4 @@
+use std::sync::Arc;
 use socket_tcp_protocol::*;
 
 use tokio::{
@@ -10,46 +11,35 @@ use tokio::{
 async fn main() {
     let listener = TcpListener::bind("127.0.0.1:8809").await.expect("can't bind tcp listener");
 
-    let mut smart_socket = SmartSocket::default();
+    let smart_socket: Arc<Mutex<SmartSocket>> = Arc::new(Mutex::new(SmartSocket::default()));
 
-
-    while let Some(connection) = listener.incoming().next() {
-        let mut stream = match connection {
-            Ok(conn) => conn,
-            Err(err) => {
-                println!("can't receive connection: {err}");
-                continue;
-            }
-        };
-
-        let peer = stream
-            .peer_addr()
-            .map(|a| a.to_string())
-            .unwrap_or_else(|_| "unknown".into());
+    loop {
+        let (mut stream, peer) = listener.accept().await.unwrap();
         println!("Peer '{peer}' connected");
+        let socket_clone = smart_socket.clone();
 
-        let mut in_size_buffer = [0u8; 4];
-        while stream.read_exact(&mut in_size_buffer).is_ok() {
-            let size: usize = u32::from_be_bytes(in_size_buffer) as usize;
-            let mut payload = vec![0; size];
-            stream.read_exact(&mut payload[..]).unwrap();
+        tokio::spawn(async move {
+            loop {
+                let mut in_size_buffer = [0u8; 4];
+                stream.read_exact(&mut in_size_buffer).await.unwrap();
+                let size = u32::from_ne_bytes(in_size_buffer) as usize;
+                let mut payload = vec![0; size];
+                stream.read_exact(&mut payload[..]).await.unwrap();
+                let msg = deserialize_message(payload.as_slice());
 
-            let msg = deserialize_message(payload.as_slice());
-
-            let response = smart_socket.process_message(&msg);
-            println!("process messgae: {msg} -> {response}");
-            let response_buf = serialize_message(&response);
-            let response_size: u32 = response_buf.len() as u32;
-            let size_slice: [u8; 4] = response_size.to_be().to_ne_bytes();
-            if stream.write_all(&size_slice).is_err() {
-                break;
-            };
-            if stream.write_all(&response_buf).is_err() {
-                break;
-            };
-        }
-
-        println!("Connection with {peer} lost. Waiting for new connections...");
+                let response = socket_clone.lock().await.process_message(&msg);
+                println!("process messgae: {msg} -> {response}");
+                let response_buf = serialize_message(&response);
+                let response_size: u32 = response_buf.len() as u32;
+                let size_slice: [u8; 4] = response_size.to_be().to_ne_bytes();
+                if stream.write_all(&size_slice).await.is_err() {
+                    break;
+                };
+                if stream.write_all(&response_buf).await.is_err() {
+                    break;
+                };
+            }
+        });
     }
 }
 
