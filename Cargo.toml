@@ -7,5 +7,6 @@ members = [
     "socket_udp_server",
     "socket_udp_protocol",
     "socket_tcp_async_server",
+    "socket_tcp_async_client",
 ]
 resolver = "2"

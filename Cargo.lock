@@ -247,6 +247,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "socket_tcp_async_client"
+version = "0.1.0"
+dependencies = [
+ "rand",
+ "socket_tcp_protocol",
+ "tokio",
+]
+
+[[package]]
 name = "socket_tcp_async_server"
 version = "0.1.0"
 dependencies = [
