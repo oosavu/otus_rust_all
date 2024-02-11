@@ -1,5 +1,5 @@
-use std::sync::Arc;
 use socket_tcp_protocol::*;
+use std::sync::Arc;
 
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
@@ -9,7 +9,9 @@ use tokio::{
 
 #[tokio::main]
 async fn main() {
-    let listener = TcpListener::bind("127.0.0.1:8809").await.expect("can't bind tcp listener");
+    let listener = TcpListener::bind("127.0.0.1:8809")
+        .await
+        .expect("can't bind tcp listener");
 
     let smart_socket: Arc<Mutex<SmartSocket>> = Arc::new(Mutex::new(SmartSocket::default()));
 
