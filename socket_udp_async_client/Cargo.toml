@@ -1,0 +1,10 @@
+[package]
+name = "socket_udp_async_client"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+socket_udp_protocol = { path = "../socket_udp_protocol" }
+tokio = { version = "1.35.1", features = ["net", "macros", "rt-multi-thread", "io-util", "sync", "time"] }
